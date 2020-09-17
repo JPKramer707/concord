@@ -7,10 +7,12 @@
         "url": "https://github.com/Yahweasel/craig"
     },
     "dependencies": {
+        "@discordjs/uws": "^10.149.0",
         "better-sqlite3": "^7.1.0",
         "bufferutil": "^4.0.1",
         "cyclic-32": "^1.1.0",
         "discord.js": "^11.6.4",
+        "entropy-delight": "^1.0.2",
         "eris": "^0.13.3",
         "erlpack": "github:abalabahaha/erlpack",
         "googleapis": "^58.0.0",

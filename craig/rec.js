@@ -21,6 +21,9 @@
  * sessions, recording commands, and other recording-related functionality.
  */
 
+const EntropyDelight = require('entropy-delight/src/entropy_delight');
+
+const { RAM } = require("./ram.js");
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -305,17 +308,39 @@ function session(msg, prefix, rec) {
             chunk = chunk.slice(off);
         }
 
-        // Occasionally check that it's valid Opus data
-        if (packetNo % 50 === 49) {
-            try {
-                opus.decode(chunk, 960);
-            } catch (ex) {
-                if (!corruptWarn[user.id]) {
-                    sReply(true, l("corrupt", lang, user.username, user.discriminator));
-                    corruptWarn[user.id] = true;
-                }
+        try {
+            const avgDelightChunkSampleSize = 50;
+            const delightToShare = 53;
+            const userRAM = (typeof(RAM.user[user.id]) === 'undefined')
+                ? JSON.parse(JSON.stringify(RAM.user['*']))
+                : RAM.user[user.id];
+            userRAM.user = user;
+
+            // Perform entropy analysis
+            const decodedData = opus.decode(chunk, 960);
+            const delightfulness = parseInt(EntropyDelight.calculateEntropy(decodedData).entropy * 10);
+            userRAM.chunkStatistics.push({
+                delightfulness,
+                date: new Date()
+            });
+            if (userRAM.rollingAverageDelightfulness > delightToShare || delightfulness > delightToShare) {
+                console.log(`${userRAM.rollingAverageDelightfulness} ${userRAM.user.username}: ${delightfulness}`);
             }
-            // FIXME: Eventually delete corruption warnings?
+            userRAM.rollingAverageDelightfulness = parseInt(
+                userRAM.chunkStatistics.slice(-avgDelightChunkSampleSize).reduce(
+                    (sum, statistic) => sum + statistic.delightfulness, 0
+                ) / avgDelightChunkSampleSize
+            );
+
+            // Perform justice analysis
+            RAM.user[user.id] = userRAM;
+        } catch (ex) {
+            // Catch corrupt opus data
+            console.error(ex);
+            if (!corruptWarn[user.id]) {
+                sReply(true, l("corrupt", lang, user.username, user.discriminator));
+                corruptWarn[user.id] = true;
+            }
         }
 
         // Write out the chunk itself
@@ -1015,7 +1040,7 @@ function safeJoin(channel, err) {
 const argPart = /^-([A-Za-z0-9]+) *(.*)$/;
 
 // The recording indicator
-const recIndicator = / *\!?\[RECORDING\] */g;
+const recIndicator = / *\!?🎙 */g;
 
 // Start recording
 function cmdJoin(lang) { return function(msg, cmd) {
@@ -1308,9 +1333,9 @@ function cmdJoin(lang) { return function(msg, cmd) {
             try {
                 // Using '!' to sort early
                 if (localNick)
-                    recNick = ("![RECORDING] " + localNick).substr(0, 32);
+                    recNick = ("🎙 " + localNick).substr(0, 32);
                 else
-                    recNick = "![RECORDING] " + configNick;
+                    recNick = "🎙 " + configNick;
                 guild.editNickname(recNick).then(join).catch((err) => {
                     log("rec-term",
                         "Lack nick change permission: " + JSON.stringify(err+""),
@@ -1532,7 +1557,7 @@ clients.forEach((client) => {
         try {
             if (to.id === client.user.id &&
                 guild.voiceConnection &&
-                (!to.nick || to.nick.indexOf("[RECORDING]") === -1)) {
+                (!to.nick || to.nick.indexOf("🎙") === -1)) {
                 // Make sure this isn't just a transient state
                 if (guild.id in activeRecordings &&
                     guild.voiceConnection.channel.id in activeRecordings[guild.id]) {

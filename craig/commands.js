@@ -113,10 +113,10 @@ cc.processCommands["unban"] = function(msg) {
 }
 
 // Our command regex changes to match our user ID
-var craigCommand = /^(:craig:|<:craig:[0-9]*>)[, ]*([^ ]*) ?(.*)$/i;
+var craigCommand = /^(concord|<concord[0-9]*>)[, ]*([^ ]*) ?(.*)$/i;
 const genericCommand = /^()[, ]*([^ ]*) ?(.*)$/i;
 if (client) client.on("ready", () => {
-    craigCommand = new RegExp("^(:craig:|<:craig:[0-9]*>|<@!?" + client.user.id + ">)[, ]*([^ ]*) ?(.*)$", "i");
+    craigCommand = new RegExp("^(concord|<concord[0-9]*>|<@!?" + client.user.id + ">)[, ]*([^ ]*) ?(.*)$", "i");
     if ("url" in config)
         client.editStatus("online", {name: config.url, type: 0});
 });

@@ -21,9 +21,9 @@
  * sessions, recording commands, and other recording-related functionality.
  */
 
-const EntropyDelight = require('entropy-delight/src/entropy_delight');
-
-const { RAM } = require("./ram.js");
+const { voiceAnalysis } = require('./voiceAnalysis')
+const { domination } = require("./domination");
+const { userReporter } = require("./userReporter");
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -31,7 +31,6 @@ const https = require("https");
 const ws = require("ws");
 
 const ogg = require("./ogg.js");
-const opus = new (require("node-opus")).OpusEncoder(48000);
 
 const request = require("request");
 
@@ -162,12 +161,17 @@ function session(msg, prefix, rec) {
 
     // Send the recording message
     setTimeout(()=>{
-        var nowRec = "data/nowrecording.opus";
+        var nowRec = "data/sizzle.opus";
         fs.access(nowRec, fs.constants.R_OK, (err) => {
             try {
-                if (!err)
-                    connection.play("data/nowrecording.opus", {format: "ogg"});
-            } catch (ex) {}
+                if (!err) {
+                    connection.play(nowRec, {format: "ogg"});
+                } else {
+                    console.error(err);
+                }
+            } catch (ex) {
+                console.error(ex);
+            }
         });
     }, 200);
 
@@ -308,40 +312,7 @@ function session(msg, prefix, rec) {
             chunk = chunk.slice(off);
         }
 
-        try {
-            const avgDelightChunkSampleSize = 50;
-            const delightToShare = 53;
-            const userRAM = (typeof(RAM.user[user.id]) === 'undefined')
-                ? JSON.parse(JSON.stringify(RAM.user['*']))
-                : RAM.user[user.id];
-            userRAM.user = user;
-
-            // Perform entropy analysis
-            const decodedData = opus.decode(chunk, 960);
-            const delightfulness = parseInt(EntropyDelight.calculateEntropy(decodedData).entropy * 10);
-            userRAM.chunkStatistics.push({
-                delightfulness,
-                date: new Date()
-            });
-            if (userRAM.rollingAverageDelightfulness > delightToShare || delightfulness > delightToShare) {
-                console.log(`${userRAM.rollingAverageDelightfulness} ${userRAM.user.username}: ${delightfulness}`);
-            }
-            userRAM.rollingAverageDelightfulness = parseInt(
-                userRAM.chunkStatistics.slice(-avgDelightChunkSampleSize).reduce(
-                    (sum, statistic) => sum + statistic.delightfulness, 0
-                ) / avgDelightChunkSampleSize
-            );
-
-            // Perform justice analysis
-            RAM.user[user.id] = userRAM;
-        } catch (ex) {
-            // Catch corrupt opus data
-            console.error(ex);
-            if (!corruptWarn[user.id]) {
-                sReply(true, l("corrupt", lang, user.username, user.discriminator));
-                corruptWarn[user.id] = true;
-            }
-        }
+        // ⚰️ Here died code which checked for corrupt opus data
 
         // Write out the chunk itself
         write(oggStream, chunkGranule, streamNo, packetNo, chunk);
@@ -449,6 +420,34 @@ function session(msg, prefix, rec) {
             userRecents = userRecentPackets[user.id];
 
         }
+
+        // Perform entropy analysis
+        voiceAnalysis(user, chunk, chunkTime);
+
+        // Perform justice analysis
+        if (domination(user) && userRAM.dominating && false) {
+            var nowRec = "data/click.opus";
+            fs.access(nowRec, fs.constants.R_OK, (err) => {
+                try {
+                    if (!err) {
+                        connection.play(nowRec, {format: "ogg"});
+                    } else {
+                        console.error(err);
+                    }
+                } catch (ex) {
+                    console.error(ex);
+                }
+            });
+        }
+
+        const userReports = Object
+            .keys(users)
+            .map(userId => users[userId])
+            .map(user => userReporter(user))
+            .join('\t');
+
+        console.clear();
+        console.log(`${chunkTime[0]}s ${userReports}`);
 
         // Add it to the list
         if (userRecents.length > 0) {
@@ -1019,12 +1018,20 @@ function safeJoin(channel, err) {
     function catchConnection() {
         if (guild.voiceConnection) {
             guild.voiceConnection.on("error", (ex) => {
-                // Work around the hellscape of discord.js bugs
-                try {
-                    guild.client.voice.connections.delete(guild.id);
-                } catch (noex) {}
-                if (err)
-                    err(ex);
+                if (guild.client) {
+                    // Work around the hellscape of discord.js bugs
+                    try {
+                        guild.client.voice.connections.delete(guild.id);
+                    } catch (noex) {
+                        console.error(noex);
+                    }
+                    if (err) {
+                        console.error(ex);
+                        err(ex);
+                    }
+                } else {
+                    console.warn('guild.client is undefined');
+                }
             });
             clearInterval(insaneInterval);
         }

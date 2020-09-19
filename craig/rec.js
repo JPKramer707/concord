@@ -21,9 +21,12 @@
  * sessions, recording commands, and other recording-related functionality.
  */
 
+const { ram } = require('./ram');
+const { mute } = require('./actions');
 const { voiceAnalysis } = require('./voiceAnalysis')
 const { domination } = require("./domination");
 const { userReporter } = require("./userReporter");
+const { speak } = require('./speak');
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -161,18 +164,7 @@ function session(msg, prefix, rec) {
 
     // Send the recording message
     setTimeout(()=>{
-        var nowRec = "data/sizzle.opus";
-        fs.access(nowRec, fs.constants.R_OK, (err) => {
-            try {
-                if (!err) {
-                    connection.play(nowRec, {format: "ogg"});
-                } else {
-                    console.error(err);
-                }
-            } catch (ex) {
-                console.error(ex);
-            }
-        });
+        speak(connection, 'sizzle');
     }, 200);
 
     // Active users, by ID
@@ -425,19 +417,41 @@ function session(msg, prefix, rec) {
         voiceAnalysis(user, chunk, chunkTime);
 
         // Perform justice analysis
-        if (domination(user) && userRAM.dominating && false) {
-            var nowRec = "data/click.opus";
-            fs.access(nowRec, fs.constants.R_OK, (err) => {
-                try {
-                    if (!err) {
-                        connection.play(nowRec, {format: "ogg"});
-                    } else {
-                        console.error(err);
-                    }
-                } catch (ex) {
-                    console.error(ex);
+        try {
+            const dom = domination(user);
+            if (dom) {
+                const { dominating } = ram.getUser(user);
+                const guildId = connection.channel.guild.id;
+                if (dominating) {
+                    console.log('Muting...');
+                    
+                    client.editGuildMember(
+                        guildId,
+                        user.id,
+                        { mute: true },
+                        'Citation #000'
+                    ).then(() => {
+                        const userRAM = ram.getUser(user);
+                        userRAM.serverMute = true;    
+                        ram.setUser(userRAM);
+                    });
+
+                    speak(connection, 'click');
+                } else {
+                    client.editGuildMember(
+                        guildId,
+                        user.id,
+                        { mute: false },
+                        'Citation #000'
+                    ).then(() => {
+                        const userRAM = ram.getUser(user);
+                        userRAM.serverMute = false;    
+                        ram.setUser(userRAM);
+                    });
                 }
-            });
+            }
+        } catch(e) {
+            console.error(e);
         }
 
         const userReports = Object
@@ -446,8 +460,9 @@ function session(msg, prefix, rec) {
             .map(user => userReporter(user))
             .join('\t');
 
-        console.clear();
-        console.log(`${chunkTime[0]}s ${userReports}`);
+        //console.clear();
+        const seconds = parseInt(parseFloat(chunkTime[0]+'.'+chunkTime[1])*10)/10;
+        console.log(`${seconds}S ${userReports}`);
 
         // Add it to the list
         if (userRecents.length > 0) {

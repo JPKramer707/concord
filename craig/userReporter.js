@@ -9,10 +9,11 @@ const userReporter = (user) => {
             delightfulness,
             delightfulnessRollingAverage
         } = userRAM.chunkStatistics.slice(-1)[0];
-        const { dominating } = userRAM;
+        const { dominating, serverMute } = userRAM;
 
-        return ``+
-            (
+        const emoji = serverMute
+            ? '🤐'
+            : (
                 dominating
                     ? '😱'
                     : (
@@ -20,8 +21,10 @@ const userReporter = (user) => {
                             ? '😮'
                             : '😐'
                     )
-            )+
-            ' '+
+            );
+
+        return ``+
+            emoji+
             `${user.username}: `+
             `${delightfulnessRollingAverage}/${delightfulness}`;
     } catch(e) {

@@ -1,4 +1,5 @@
 const { ram } = require("./ram.js");
+const { send } = require('./websocket');
 const opus = new (require("node-opus")).OpusEncoder(48000);
 const { calculateEntropy } = require('entropy-delight/src/entropy_delight');
 
@@ -8,7 +9,7 @@ const voiceAnalysis = (user, chunk, chunkTime) => {
     const delightToShare = 53;
     const decodedData = opus.decode(chunk, 960);
     const delightfulness = parseInt(calculateEntropy(decodedData).entropy * 10);
-    userRAM.chunkStatistics.push({
+    const statistic = {
         date: new Date(),
         sharingDelight: (
             userRAM.rollingAverageDelightfulness > delightToShare ||
@@ -21,10 +22,13 @@ const voiceAnalysis = (user, chunk, chunkTime) => {
                 (sum, statistic) => sum + statistic.delightfulness, 0
             ) / avgDelightChunkSampleSize
         )
-    });  
+    };
+    userRAM.chunkStatistics.push(statistic);
     ram.setUser(user, userRAM);
 
-    return userRAM.chunkStatistics.slice(-1)[0];
+    send(statistic);
+
+    return statistic;
 };
 
 exports.voiceAnalysis = voiceAnalysis;

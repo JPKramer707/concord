@@ -22,7 +22,7 @@
  */
 
 const { ram } = require('./ram');
-const { mute } = require('./actions');
+const { mute, unMute } = require('./actions');
 const { voiceAnalysis } = require('./voiceAnalysis')
 const { domination } = require("./domination");
 const { userReporter } = require("./userReporter");
@@ -423,46 +423,26 @@ function session(msg, prefix, rec) {
                 const { dominating } = ram.getUser(user);
                 const guildId = connection.channel.guild.id;
                 if (dominating) {
-                    console.log('Muting...');
-                    
-                    client.editGuildMember(
-                        guildId,
-                        user.id,
-                        { mute: true },
-                        'Citation #000'
-                    ).then(() => {
-                        const userRAM = ram.getUser(user);
-                        userRAM.serverMute = true;    
-                        ram.setUser(userRAM);
-                    });
-
-                    speak(connection, 'click');
+                    mute(connection, user, guildId);
                 } else {
-                    client.editGuildMember(
-                        guildId,
-                        user.id,
-                        { mute: false },
-                        'Citation #000'
-                    ).then(() => {
-                        const userRAM = ram.getUser(user);
-                        userRAM.serverMute = false;    
-                        ram.setUser(userRAM);
-                    });
+                    unMute(connection, user, guildId);
                 }
             }
         } catch(e) {
             console.error(e);
         }
 
+        // Report status to console
         const userReports = Object
             .keys(users)
+            .slice(0,4)
             .map(userId => users[userId])
             .map(user => userReporter(user))
             .join('\t');
 
         //console.clear();
         const seconds = parseInt(parseFloat(chunkTime[0]+'.'+chunkTime[1])*10)/10;
-        console.log(`${seconds}S ${userReports}`);
+        //console.log(`${seconds}S ${userReports}`);
 
         // Add it to the list
         if (userRecents.length > 0) {

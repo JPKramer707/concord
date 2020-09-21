@@ -11,6 +11,7 @@ const voiceAnalysis = (user, chunk, chunkTime) => {
     const delightfulness = parseInt(calculateEntropy(decodedData).entropy * 10);
     const statistic = {
         date: new Date(),
+        user,
         sharingDelight: (
             userRAM.rollingAverageDelightfulness > delightToShare ||
             delightfulness > delightToShare

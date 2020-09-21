@@ -1,6 +1,6 @@
 const { ram } = require('./ram');
 const { speak } = require('./speak');
-const { client } = require("./client.js");
+const { client } = require("../craig/client.js");
 
 const mute = (connection, user, guildId) => muteUnmute(true, connection, user, guildId);
 const unMute = (connection, user, guildId) => muteUnmute(false, connection, user, guildId);

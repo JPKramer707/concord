@@ -1,5 +1,4 @@
 const { ram } = require("./ram.js");
-const { send } = require('./websocket');
 const opus = new (require("node-opus")).OpusEncoder(48000);
 const { calculateEntropy } = require('entropy-delight/src/entropy_delight');
 
@@ -26,8 +25,6 @@ const voiceAnalysis = (user, chunk, chunkTime) => {
     };
     userRAM.chunkStatistics.push(statistic);
     ram.setUser(user, userRAM);
-
-    send(statistic);
 
     return statistic;
 };

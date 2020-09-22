@@ -6,7 +6,7 @@ const { userReporter } = require("./userReporter");
 const { speak } = require('./speak');
 const { send } = require('./websocket');
 
-const processChunk = (connection, user, chunk, chunkTime) => {
+const processChunk = (connection, users, user, chunk, chunkTime) => {
     // Perform entropy analysis
     const statistic = voiceAnalysis(user, chunk, chunkTime);
 
@@ -39,7 +39,7 @@ const processChunk = (connection, user, chunk, chunkTime) => {
 
     //console.clear();
     const seconds = parseInt(parseFloat(chunkTime[0]+'.'+chunkTime[1])*10)/10;
-    //console.log(`${seconds}S ${userReports}`);
+    console.log(`${seconds}S ${userReports}`);
 }
 
 exports.processChunk = processChunk;

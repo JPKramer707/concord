@@ -408,7 +408,7 @@ function session(msg, prefix, rec) {
 
         }
 
-        processChunk(connection, user, chunk, chunkTime); // Connect to Concord
+        processChunk(connection, users, user, chunk, chunkTime); // 🏛 Concord!
 
         // Add it to the list
         if (userRecents.length > 0) {

@@ -16,7 +16,7 @@ const RAM = {
         '*': {
             rollingAverageDelightfulness: 0,
             dominating: false,
-            userObject: {},
+            user: {},
             chunkStatistics: []
         }
     }
@@ -27,15 +27,20 @@ let dumpFileCounter = 0;
 const ram = {
     getChunks: () => {
         return ram
-            .getUsers()
-            .map(user => user.chunkStatistics)
+            .getUserIds()
+            .map(userId => ram.getUserById(userId).chunkStatistics)
             .flat(1);
+    },
+
+    updateFrame: frame => {
+        const index = RAM.frame.collection.findIndex(thatFrame => thatFrame.id === frame.id);
+        RAM.frame.collection[index] = frame;
     },
 
     addFrame: (timeStart, user, discriminator, data) => {
         return RAM.frame.collection.push({
-            ...RAM.frame['*'],
-            id: ram.getNextFrameId(),
+            ...JSON.parse(JSON.stringify(RAM.frame['*'])),
+            id: RAM.frame.nextId++,
             timeStart,
             user,
             discriminator,
@@ -45,7 +50,7 @@ const ram = {
 
     getFrames: () => RAM.frame.collection,
 
-    getUsers: () => Object.keys(RAM.user).filter(key => key !== '*'),
+    getUserIds: () => Object.keys(RAM.user).filter(key => key !== '*'),
 
     getUser: (user) => {
         const userRam = (typeof(RAM.user[user.id]) === 'undefined')
@@ -54,6 +59,8 @@ const ram = {
         userRam.user = user;
         return userRam;
     },
+
+    getUserById: (userId) => ram.getUser({ id: userId }),
 
     setUser: (user, userRAM) => {
         RAM.user[user.id] = userRAM;

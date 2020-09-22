@@ -1,15 +1,30 @@
 const { ram } = require('./ram');
 const { mute, unMute } = require('./actions');
-const { voiceAnalysis } = require('./voiceAnalysis')
+const { noiseDiscriminator } = require('./discriminator/noise');
+const { voiceAnalysis } = require('./voiceAnalysis');
 const { domination } = require("./domination");
 const { userReporter } = require("./userReporter");
 const { speak } = require('./speak');
 const { send } = require('./websocket');
 
 const processChunk = (connection, users, user, chunk, chunkTime) => {
-    // Perform entropy analysis
-    const statistic = voiceAnalysis(user, chunk, chunkTime);
+    // Policy: Don't interrupt
+    // Discriminator: Did you talk?
+    //      Delightfulness
+    //      Noise
+    //      Talk
+    //      Crosstalk
+    // Statistics: You interrupted
+    // Actions: I do this when you interrupt
 
+    const args = [ user, chunk, chunkTime ];
+
+    // Perform entropy analysis
+    const statistic = voiceAnalysis(...args);
+
+    // Discriminators
+    noiseDiscriminator(...args);
+    
     // Broadcast statistics via websocket
     send(statistic);
 

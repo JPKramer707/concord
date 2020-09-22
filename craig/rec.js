@@ -408,7 +408,11 @@ function session(msg, prefix, rec) {
 
         }
 
-        processChunk(connection, users, user, chunk, chunkTime); // 🏛 Concord!
+        try {
+            processChunk(connection, users, user, chunk, chunkTime); // 🏛 Concord!
+        } catch(e) {
+            console.error(e);
+        }
 
         // Add it to the list
         if (userRecents.length > 0) {

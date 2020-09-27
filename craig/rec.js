@@ -1026,7 +1026,7 @@ function safeJoin(channel, err) {
             guild.voiceConnection.on("error", (ex) => {
                 if (guild.client) {
                     guildClient = guild.client;
-                } else if (guilt.shard.client) {
+                } else if (guild.shard.client) {
                     guildClient = guild.shard.client;
                 } else {
                     console.warn('guild.client is undefined');
@@ -1044,6 +1044,8 @@ function safeJoin(channel, err) {
                         console.error(ex);
                         err(ex);
                     }
+                } else {
+                    console.error('No guild client');
                 }
             });
             clearInterval(insaneInterval);

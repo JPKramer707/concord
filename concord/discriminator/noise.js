@@ -4,7 +4,7 @@ const sampleCount = 2;
 const sampleSize = 5;
 const discriminator = 'Noise';
 const state = {};
-const dumpFile = `./${discriminator}.json`;
+//const dumpFile = `./${discriminator}.json`;
 var dumpFileCounter = 0;
 const delightThreshhold = 43;
 
@@ -26,17 +26,21 @@ const noiseDiscriminator = (user, chunk, chunkTime) => {
             previousDelight = previousChunk.delightfulness,
             thisDelight = thisChunk.delightfulness;
 
-        if (thisDelight > delightThreshhold && previousDelight < delightThreshhold) {
+        if (state.openFrames.length === 0 && thisDelight > delightThreshhold && previousDelight < delightThreshhold) {
             // Started talk
+            const xyzzy = getOpenFrames().length;
+            if (xyzzy > 0) {
+                console.warn(`New frame, despite ${xyzzy} open frames already`);
+            }
             ram.addFrame(
                 thisChunk.chunkTime,
                 user,
                 discriminator,
                 { noise: true }
             );
-            dumpToFile(ram.getFrames());
+            dumpToFile(getOpenFrames());
         }
-        if (thisDelight < delightThreshhold && previousDelight > delightThreshhold) {
+        if (state.openFrames.length > 0 && thisDelight < delightThreshhold && previousDelight > delightThreshhold) {
             // Ended talk
             switch (state.openFrames.length) {
                 case 0:
@@ -46,7 +50,7 @@ const noiseDiscriminator = (user, chunk, chunkTime) => {
                     const frame = state.openFrames[0];
                     frame.timeEnd = thisChunk.chunkTime;
                     ram.updateFrame(frame);
-                    dumpToFile(ram.getFrames());
+                    dumpToFile(getOpenFrames());
                 break;
                 default:
                     console.warn('Multiple open frames');
@@ -68,7 +72,7 @@ const getOpenFrames = () => {
 }
 
 const dumpToFile = data => {
-    if (dumpFile) {
+    if (typeof(dumpFile) !== 'undefined') {
         try {
             fs.writeFile(dumpFile, JSON.stringify(data), {}, () => {});
         } catch(e) {
@@ -98,4 +102,4 @@ const profileDelightfulness = sample => {
 }
 
 exports.noiseDiscriminator = noiseDiscriminator;
-exports discriminator = discriminator;
+exports.discriminator = discriminator;

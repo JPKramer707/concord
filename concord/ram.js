@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { send } = require('./websocket');
 const RAM = {
     frame: {
         'nextId': 0,
@@ -21,7 +22,7 @@ const RAM = {
         }
     }
 };
-const dumpFile = './ram.json';
+//const dumpFile = './ram.json';
 let dumpFileCounter = 0;
 
 const ram = {
@@ -35,10 +36,11 @@ const ram = {
     updateFrame: frame => {
         const index = RAM.frame.collection.findIndex(thatFrame => thatFrame.id === frame.id);
         RAM.frame.collection[index] = frame;
+        send(ram.getFrames());
     },
 
     addFrame: (timeStart, user, discriminator, data) => {
-        return RAM.frame.collection.push({
+        const newFrame = RAM.frame.collection.push({
             ...JSON.parse(JSON.stringify(RAM.frame['*'])),
             id: RAM.frame.nextId++,
             timeStart,
@@ -46,6 +48,8 @@ const ram = {
             discriminator,
             data
         });
+        send(ram.getFrames());
+        return newFrame;
     },
 
     getFrames: () => RAM.frame.collection,
@@ -65,7 +69,7 @@ const ram = {
     setUser: (user, userRAM) => {
         RAM.user[user.id] = userRAM;
 
-        if (dumpFile && dumpFileCounter++ % 50 === 49) {
+        if (typeof(dumpFile) !== 'undefined' && dumpFileCounter++ % 50 === 49) {
             try {
                 fs.writeFile(dumpFile, JSON.stringify(RAM), {}, () => {});
             } catch(e) {

@@ -1,18 +1,18 @@
+const { switches } = require('./config');
 const { ram } = require("./ram.js");
 const { calculateEntropy } = require('entropy-delight/src/entropy_delight');
-const displayBar = false;
 
 const userReporter = (user) => {
     try {
         const userRAM = ram.getUser(user);
         const { chunkStatistics } = userRAM;
-        const {
-            sharingDelight,
-            delightfulness,
-            delightfulnessRollingAverage
-        } = chunkStatistics.slice(-1)[0];
+        const slice = chunkStatistics.slice(-1)[0];
+        console.log(slice);
+        const { delightfulness } = slice;
+        const sharingDelight = (switches.voiceAnalysisSharingDelight) ? slice.sharingDelight : '?';
+        const delightfulnessRollingAverage = (switches.voiceAnalysisRollingAverage) ? slice.delightfulnessRollingAverage : '?';
         const { dominating, serverMute } = userRAM;
-        const bar = '█'.repeat(Math.max(0,(delightfulness-45)));
+        const bar = (switches.serverConsoleVoiceBar) ? '█'.repeat(Math.max(0,(delightfulness-45))) : '';
 
         const emoji = serverMute
             ? '🤐'
@@ -30,7 +30,7 @@ const userReporter = (user) => {
             emoji+
             `${user.username}: `+
             `${chunkStatistics.length} chunks `+
-            (displayBar
+            (switches.serverConsoleVoiceBar
                 ? bar
                 : `${delightfulnessRollingAverage}/${delightfulness}`
             );

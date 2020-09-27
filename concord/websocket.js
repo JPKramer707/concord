@@ -1,5 +1,4 @@
-const WebSocket = require('ws');
- 
+const WebSocket = require('ws'); 
 const wss = new WebSocket.Server({ port: 8080 });
 let webSocket = undefined;
 
@@ -8,6 +7,7 @@ const send = data => {
 		webSocket.send(JSON.stringify(data));
 	}
 };
+
 
 wss.on('connection', ws => {
 	webSocket = ws;

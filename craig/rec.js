@@ -21,6 +21,7 @@
  * sessions, recording commands, and other recording-related functionality.
  */
 
+const { concord } = require('../concord/concord');
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -91,6 +92,8 @@ const emptyBuf = Buffer.alloc(0);
 
 // Our query to decide whether to run a Drive upload
 const driveStmt = db.prepare("SELECT * FROM drive WHERE id=@id");
+
+concord.start();
 
 // Our recording session proper
 function session(msg, prefix, rec) {
@@ -341,6 +344,8 @@ function session(msg, prefix, rec) {
 
     // And receiver for the actual data
     function onReceive(user, chunk) {
+        concord.tc(() => concord.onReceive());
+
         // By default, chunk.time is the receipt time
         var chunkTime = process.hrtime(startTime);
         chunk.time = chunkTime[0] * 48000 + ~~(chunkTime[1] / 20833.333);
@@ -849,6 +854,8 @@ function session(msg, prefix, rec) {
 
     // General speech/stop informer
     function monSpeak(idx, on) {
+        concord.tc(() => concord.speaking(idx, on));
+
         if (!monWs) return;
         var p = ecp.parts.speech;
         var buf = Buffer.alloc(p.length);
@@ -984,6 +991,19 @@ function session(msg, prefix, rec) {
             logex(ex);
         }
     });
+
+    concord.tc(() => concord.spy(
+        users,
+        webUsers,
+        webPingers,
+        userTrackNos,
+        userPacketNos,
+        userRecentPackets,
+        corruptWarn,
+        trackNo,
+        startTime,
+        size
+    ));
 }
 
 // Join a voice channel, working around discord.js' knot of insane bugs

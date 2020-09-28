@@ -1,10 +1,10 @@
 {
-    "name": "craig",
-    "homepage": "http://craig.chat/home/",
+    "name": "concord",
+    "homepage": "http://concord.nope2020.com/",
     "license": "ISC",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Yahweasel/craig"
+        "url": "https://github.com/WAKlNYAN/concord"
     },
     "dependencies": {
         "better-sqlite3": "^7.1.0",
@@ -19,5 +19,11 @@
         "sqlite3": "^5.0.0",
         "ws": "^7.3.1",
         "zlib-sync": "^0.1.7"
+    },
+    "devDependencies": {
+        "jest": "^26.4.2"
+    },
+    "scripts": {
+        "test": "jest"
     }
 }

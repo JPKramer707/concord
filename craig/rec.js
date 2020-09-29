@@ -344,7 +344,7 @@ function session(msg, prefix, rec) {
 
     // And receiver for the actual data
     function onReceive(user, chunk) {
-        concord.tc(() => concord.onReceive());
+        concord.tc(() => concord.onReceive(user, chunk));
 
         // By default, chunk.time is the receipt time
         var chunkTime = process.hrtime(startTime);
@@ -854,8 +854,6 @@ function session(msg, prefix, rec) {
 
     // General speech/stop informer
     function monSpeak(idx, on) {
-        concord.tc(() => concord.speaking(idx, on));
-
         if (!monWs) return;
         var p = ecp.parts.speech;
         var buf = Buffer.alloc(p.length);
@@ -1002,7 +1000,8 @@ function session(msg, prefix, rec) {
         corruptWarn,
         trackNo,
         startTime,
-        size
+        size,
+        connection
     ));
 }
 

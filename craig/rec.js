@@ -22,6 +22,7 @@
  */
 
 const { concord } = require('../concord/concord');
+const { store } = require('../concord/store');
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -93,8 +94,6 @@ const emptyBuf = Buffer.alloc(0);
 // Our query to decide whether to run a Drive upload
 const driveStmt = db.prepare("SELECT * FROM drive WHERE id=@id");
 
-concord.start();
-
 // Our recording session proper
 function session(msg, prefix, rec) {
     var connection = rec.connection;
@@ -104,6 +103,8 @@ function session(msg, prefix, rec) {
     var lang = rec.lang;
     var sizeLimit = config.hardLimit;
     var monWs = null;
+
+    concord.tc(() => concord.start(connection));
 
     function sReply(dm, pubtext, privtext) {
         reply(msg, dm, prefix, pubtext, privtext);
@@ -171,29 +172,17 @@ function session(msg, prefix, rec) {
         });
     }, 200);
 
-    // Active users, by ID
-    var users = {};
-
-    // Active web users, by username#web
-    var webUsers = {};
-
-    // Active ping connections, simply so we can close them when we're done with them
-    var webPingers = {};
-
-    // Track numbers for each active user
-    var userTrackNos = {};
-
-    // Packet numbers for each active user
-    var userPacketNos = {};
-
-    // Recent packets, before they've been flushed, for each active non-web user
-    var userRecentPackets = {};
-
-    // Have we warned about this user's data being corrupt?
-    var corruptWarn = {};
-
-    // Our current track number
-    var trackNo = 1;
+    var {
+        users, // Active users, by ID
+        webUsers,  // Active web users, by username#web
+        webPingers,  // Active ping connections, simply so we can close them when we're done with them
+        userTrackNos,  // Track numbers for each active user
+        userPacketNos,  // Packet numbers for each active user
+        userRecentPackets,  // Recent packets, before they've been flushed, for each active non-web user
+        corruptWarn,  // Have we warned about this user's data being corrupt?
+        trackNo,  // Our current track number
+        size   // The amount of data I've recorded
+    } = store;
 
     // Information for the note stream
     var noteStreamOn = false;
@@ -203,9 +192,6 @@ function session(msg, prefix, rec) {
     // Set up our recording OGG header and data file
     var startTime = process.hrtime();
     var recFileBase = "rec/" + id + ".ogg";
-
-    // The amount of data I've recorded
-    var size = 0;
 
     // Keep track and disconnect if we seem unused
     var lastSize = 0;
@@ -989,20 +975,6 @@ function session(msg, prefix, rec) {
             logex(ex);
         }
     });
-
-    concord.tc(() => concord.spy(
-        users,
-        webUsers,
-        webPingers,
-        userTrackNos,
-        userPacketNos,
-        userRecentPackets,
-        corruptWarn,
-        trackNo,
-        startTime,
-        size,
-        connection
-    ));
 }
 
 // Join a voice channel, working around discord.js' knot of insane bugs

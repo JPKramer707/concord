@@ -23,7 +23,7 @@ const debounceSpeaking = (idx, bool) => {
 			speaking: debounce(
 				debounceTime,
 				() => {
-					store.pushMessage(`${user.username} 🔈`);
+					//store.pushMessage(`${user.username} 🔈`);
 					speaking(idx, false);
 				}
 			)
@@ -33,7 +33,7 @@ const debounceSpeaking = (idx, bool) => {
 	// Only register speech if they're not muted.
 	if (bool && !store.isMuted(user.id)) {
 		speaking(idx, true);
-		store.pushMessage(`${user.username} 🔊`);
+		//store.pushMessage(`${user.username} 🔊`);
 		debouncers[idx].speaking();
 	}
 };
@@ -44,6 +44,16 @@ const speaking = (idx, on) => {
 	store.setSpeaking(user.id, on);
 
 	if (on) {
+		const latest = store.getLatestSpeakingRecord(user.id);
+		if (latest !== undefined && latest.end === undefined) {
+			store.editLatestSpeakingRecord(
+				user.id,
+				(record) => record.end = process.hrtime.bigint()
+			);
+		}
+		if (latest !== undefined && latest.end === undefined) {
+			debugger;
+		}
 		store.addSpeakingRecord(
 			user.id,
 			{

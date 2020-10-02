@@ -1,3 +1,5 @@
+const { overlap, tc, argsToArray } = require('./tc');
+
 var users = {},
 	webUsers = {},
 	webPingers = {},
@@ -43,7 +45,7 @@ const
 		callbacks[type].forEach(
 			cb => cb.apply(
 				null,
-				Array.prototype.slice.call(arguments, 1)
+				argsToArray(arguments, 1)
 			)
 		)
 	},
@@ -95,11 +97,27 @@ const
 		speakingRecords[userId].push(record);
 	},
 
-	getLatestSpeakingRecord = (userId) => speakingRecords[userId].slice(-1)[0],
+	getLatestSpeakingRecord = (userId) => getSpeakingRecordsByUserId(userId).slice(-1)[0],
 
 	editLatestSpeakingRecord = (userId, editor) => {
 		const latest = speakingRecords[userId].slice(-1)[0];
 		speakingRecords[userId][speakingRecords.length-1] = editor(latest);
+	},
+
+	// Returns the total ns during which this user spoke between the two reference times
+	getUserSpeechBetweenTimes = (userId, hrtime1, hrtime2, maxduration) => {
+		const now = process.hrtime.bigint();
+		const x = getSpeakingRecordsByUserId(userId).slice(-100);
+		const y = x.reduce((acc, rec) => acc +
+			Number(tc(() => overlap(
+				hrtime1,
+				hrtime2,
+				rec.start,
+				rec.end || now
+			)))
+		, 0);
+		//if (y > maxduration) debugger;
+		return y;
 	},
 
 	getUserById = userId => users[userId],
@@ -155,4 +173,5 @@ exports.store = {
 	setConnection,
 	getUsers,
 	setSpeaking,
+	getUserSpeechBetweenTimes,
 };

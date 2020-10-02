@@ -24,17 +24,7 @@ const {
     size   // The amount of data I've recorded
 } = store;
 
-const regularlyThrottleTime = 1000;
-
-// API Courtesy
-var discordAPIMute = {
-	count: 0,
-	limit: 100
-};
-var discordAPIUnmute = {
-	count: 0,
-	limit: 100
-};
+const regularlyThrottleTime = 250;
 
 const concord = {
 	start: (connection) => {

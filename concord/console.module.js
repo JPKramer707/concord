@@ -24,7 +24,7 @@ const setup = () => {
 
 const generateUserSpeechHistory = (userId, nowHrtime) => {
 	const me = store.getUserById(userId);
-	return `${pad(20, me.username)} ` +
+	return `${pad(me.username, 20, ' ')} ` +
 		`${noise[me.id] ? '🔊' : '🔈'}` +
 		`${speaking[me.id] ? '😮' : '😐'} ` +
 		(new Array(speechHistoryDisplayWidthChars))
@@ -96,7 +96,7 @@ const reportTalk = throttle(throttleTime, () => {
 		);
 	};
 
-	console.clear();
+	//console.clear();
 	console.log(
 		new Date(),
 		"\nAPI Courtesy",
@@ -110,11 +110,17 @@ const reportTalk = throttle(throttleTime, () => {
 		).join("\n"),
 		"\n\n",
 		Object.keys(store.getUsers()).map(
-			userId => `${store.getUserById(userId).username} ` +
-			speechReport.map(
-				record => record.byUser[userId] > 0 ? '▓' : '░'
-			).join('')
-		).join("\n")
+			userId => `${pad(20, store.getUserById(userId).username)} ` +
+				store.getModule('noise').getIcons(userId) +
+				store.getModule('speech').getIcons(userId) +
+				' ' +
+				speechReport.map(
+					record => record.byUser[userId] > 0 ? '▓' : '░'
+				).join('') +
+				speechReport.reduce(
+					(acc, rec) => acc + rec.byUser[userId], 0
+				) + ' speech total'
+		).join("\n ")
 
 					/*
 					talking = store.getSpeakingByUserId(userId);

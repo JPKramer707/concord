@@ -3,7 +3,7 @@ const { eventEmitter } = require('./eventEmitter');
 const { store } = require('./store');
 const { hrtimeToBigint } = require('./tc');
 
-const threshhold = 40;
+const threshhold = 45;
 const noise = {};
 const currentTemplate = {
 	start: undefined,
@@ -22,7 +22,7 @@ const processEntropy = (user, entropyLevel, chunk) => {
 		if (entropyLevel < threshhold) {
 			const record = {
 				...noise[user.id].current,
-				end: hrtimeToBigint(chunk.time)
+				end: hrtimeToBigint(chunk.hrtime)
 			};
 			noise[user.id].history.push(record);
 			noise[user.id].current = {
@@ -30,12 +30,12 @@ const processEntropy = (user, entropyLevel, chunk) => {
 			};
 			eventEmitter.emit('noise-end', user, record);
 		} else {
-			noise[user.id].current.sustain = hrtimeToBigint(chunk.time)
+			noise[user.id].current.sustain = hrtimeToBigint(chunk.hrtime)
 			eventEmitter.emit('noise-sustain', user, noise[user.id].current);
 		}
 	} else {
 		if (entropyLevel > threshhold) {
-			noise[user.id].current.start = hrtimeToBigint(chunk.time)
+			noise[user.id].current.start = hrtimeToBigint(chunk.hrtime)
 			eventEmitter.emit('noise-start', user, noise[user.id].current);
 		}
 	}
@@ -50,5 +50,8 @@ const ensureUserSetup = (user) => {
 	}
 };
 
+const getIcons = (userId) => `${noise[userId].current.start ? '🔊' : '🔈'}`;
+
 exports.setup = setup;
 exports.moduleName = moduleName;
+exports.getIcons = getIcons;

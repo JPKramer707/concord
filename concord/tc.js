@@ -7,6 +7,7 @@ const tc = (callback) => {
 		return callback();
 	} catch(e) {
 		console.error(e);
+		return () => {}
 	}
 };
 
@@ -53,7 +54,7 @@ const overlap = (a1, a2, b1, b2) => {
 	if (a1 > b2 || a2 < b1) return 0;
 	const c1 = mathMin(mathMax(a1, b1), a2);
 	const c2 = mathMax(mathMin(a2, b2), a1);
-	const rv = Number(c2 - c1) + 1;
+	const rv = Number(c2 - c1);
 	return rv;
 };
 

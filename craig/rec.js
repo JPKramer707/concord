@@ -330,6 +330,7 @@ function session(msg, prefix, rec) {
     function onReceive(user, chunk) {
         // By default, chunk.time is the receipt time
         var chunkTime = process.hrtime(startTime);
+        chunk.hrtime = chunkTime;
         chunk.time = chunkTime[0] * 48000 + ~~(chunkTime[1] / 20833.333);
 
         concord.tc(() => concord.onReceive(user, chunk));

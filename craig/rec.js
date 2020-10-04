@@ -104,8 +104,6 @@ function session(msg, prefix, rec) {
     var sizeLimit = config.hardLimit;
     var monWs = null;
 
-    concord.tc(() => concord.start(connection));
-
     function sReply(dm, pubtext, privtext) {
         reply(msg, dm, prefix, pubtext, privtext);
     }
@@ -330,11 +328,11 @@ function session(msg, prefix, rec) {
 
     // And receiver for the actual data
     function onReceive(user, chunk) {
-        concord.tc(() => concord.onReceive(user, chunk));
-
         // By default, chunk.time is the receipt time
         var chunkTime = process.hrtime(startTime);
         chunk.time = chunkTime[0] * 48000 + ~~(chunkTime[1] / 20833.333);
+
+        concord.tc(() => concord.onReceive(user, chunk));
 
         // Show that we're receiving
         lastTime = chunkTime;
@@ -975,6 +973,8 @@ function session(msg, prefix, rec) {
             logex(ex);
         }
     });
+
+    concord.tc(() => concord.start(connection, startTime));
 }
 
 // Join a voice channel, working around discord.js' knot of insane bugs

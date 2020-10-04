@@ -8,15 +8,25 @@ const { eventEmitter } = require('./eventEmitter');
 const throttleTime = 100;
 const ns = 1000000; // (ns) Nanosecond factor (one milisecond denominated in nanoseconds)
 const speechHistoryDisplayWidthChars = 100;
-const speechHistoryCharDurationNs = 50 * ns; // (ns) Each character in the graph covers this many nanoseconds time
+const speechHistoryCharDurationNs = 25 * ns; // (ns) Each character in the graph covers this many nanoseconds time
+
+const speaking = {};
+const noise = {};
 
 const setup = () => {
-	eventEmitter.on('regularly', () => tc(reportTalk));
+	eventEmitter
+		.on('regularly', () => tc(reportTalk))
+		.on('noise-end', (user) => noise[user.id] = false)
+		.on('noise-start', (user) => noise[user.id] = true)
+		.on('speech-end', (user) => speaking[user.id] = false)
+		.on('speech-start', (user) => speaking[user.id] = true);
 };
 
 const generateUserSpeechHistory = (userId, nowHrtime) => {
 	const me = store.getUserById(userId);
 	return `${pad(20, me.username)} ` +
+		`${noise[me.id] ? '🔊' : '🔈'}` +
+		`${speaking[me.id] ? '😮' : '😐'} ` +
 		(new Array(speechHistoryDisplayWidthChars))
 		.fill(0, 0, speechHistoryDisplayWidthChars)
 		.map(
@@ -35,11 +45,11 @@ const generateUserSpeechHistory = (userId, nowHrtime) => {
 				const symbols = '·░▒▓█xyz'.split('');
 				var symCount = 0;
 				if (x >= speechHistoryCharDurationNs) { // 0
-					return symbols[4];
+					return symbols[1]; // silence
 				} else if (x > 0) {
 					return symbols[2];
 				} else {
-					return symbols[1];
+					return symbols[4]; // Noise
 				}
 				symCount++;
 				if (x > speechHistoryCharDurationNs / 1) return symbols[symCount]; // 1
@@ -58,6 +68,18 @@ const generateUserSpeechHistory = (userId, nowHrtime) => {
 };
 
 const reportTalk = throttle(throttleTime, () => {
+	const reportLength = 50;
+	const incrementLengthNs = 1000000000 * 0.25;
+	const speechReport = store.getModule('speech').getTimeRangeReport(
+		(new Array(reportLength))
+			.fill()
+			.map(
+				(val, i) => [
+					Number(store.getTime()) + (-i * incrementLengthNs),
+					Number(store.getTime()) + ((-i * incrementLengthNs) - incrementLengthNs)
+				]
+			)
+	);
 	const nowHrtime = process.hrtime.bigint();
 	const createBars = (num, limit) => {
 		const count = Math.min(num, limit);
@@ -88,7 +110,10 @@ const reportTalk = throttle(throttleTime, () => {
 		).join("\n"),
 		"\n\n",
 		Object.keys(store.getUsers()).map(
-			userId => generateUserSpeechHistory(userId, nowHrtime)
+			userId => `${store.getUserById(userId).username} ` +
+			speechReport.map(
+				record => record.byUser[userId] > 0 ? '▓' : '░'
+			).join('')
 		).join("\n")
 
 					/*

@@ -26,7 +26,7 @@ const muteControl = (targetUserId, bool, reasonUserId, reasonUserStartTime) => {
 			false
 		);
 		store.setMuteByUserId(targetUserId, {
-			time: process.hrtime.bigint(),
+			time: store.getTime(),
 			disrupted: {
 				userId: reasonUserId,
 				startTime: reasonUserStartTime

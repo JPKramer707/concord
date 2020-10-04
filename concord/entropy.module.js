@@ -1,25 +1,17 @@
-const moduleName = 'delight';
-const { store } = require('./store');
+const moduleName = 'entropy';
 const { eventEmitter } = require('./eventEmitter');
-const { debounce } = require('throttle-debounce');
 const opus = new (require("node-opus")).OpusEncoder(48000);
 const { calculateEntropy } = require('entropy-delight');
-
-const delightfulnessThreshhold = 45;
-const debouncers = [];
-const debounceTime = 5000;
 
 const entropy = [];
 
 const setup = () => {
-	eventEmitter
-		.on('receivePacket', processPacket)
-		.on('detectNoise', debounceSpeaking)
+	eventEmitter.on('receivePacket', processPacket);
 };
 
 const processPacket = (user, chunk) => {
 	const entropyLevel = getChunkEntropy(chunk);
-	eventEmitter.emit('entropyLevel', user, entropyLevel);
+	eventEmitter.emit('entropyLevel', user, entropyLevel, chunk);
 	entropy.push({
 		time: chunk.time,
 		entropy: entropyLevel
@@ -46,11 +38,10 @@ const getChunkEntropy = (chunk) => {
 
 	try {
 		const decodedData = opus.decode(chunk, 960);
-		entropy = parseInt(calculateEntropy(decodedData).entropy * 10);
+		return parseInt(calculateEntropy(decodedData).entropy * 10);
 	} catch(e) {
 		console.error(e);
 	}
-	return entropy;
 };
 
 exports.setup = setup;

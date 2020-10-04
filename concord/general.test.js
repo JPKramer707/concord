@@ -1,6 +1,45 @@
-const { overlap, mathMax, mathMin } = require('./tc');
+const {
+    overlap,
+    mathMax,
+    mathMin,
+    rebounce,
+    hrtimeToBigint,
+} = require('./tc');
 
 beforeEach(() => {});
+
+test('hrtimeToBigint()', () => {
+    expect(hrtimeToBigint([1044677, 31388044])).toBe(1044677031388044n);
+});
+
+test('rebounce', () => {
+    jest.useFakeTimers();
+    const counters = { x: 0, y: 0, z: 0 };
+    const increment = rebounce(0, 1000, (which) => counters[which]++);
+
+    increment('x');
+    increment('x');
+    jest.advanceTimersByTime(600);
+    expect(counters.x).toBe(0);
+
+    increment('y');
+    increment('y');
+    jest.advanceTimersByTime(600);
+    expect(counters.x).toBe(1);
+    expect(counters.y).toBe(0);
+
+    increment('z');
+    increment('z');
+    jest.advanceTimersByTime(600);
+    expect(counters.x).toBe(1);
+    expect(counters.y).toBe(1);
+    expect(counters.z).toBe(0);
+
+    jest.advanceTimersByTime(600);
+    expect(counters.x).toBe(1);
+    expect(counters.y).toBe(1);
+    expect(counters.z).toBe(1);
+});
 
 test('mathMin/mathMax work', () => {
     expect(mathMax(1,2,3)).toBe(3);
@@ -42,6 +81,13 @@ test('overlap utility works', () => {
         overlap(   // 123456789
             7,8,   //       ▓▓
             1,8    // ░░░░░░▓▓
+        )
+    ).toBe(2);
+
+    expect(
+        overlap(   // 123456789
+            1,8,   // ░░░░░░▓▓
+            7,8    //       ▓▓
         )
     ).toBe(2);
 

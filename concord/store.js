@@ -3,7 +3,7 @@ const {
 	tc,
 	argsToArray,
 	hrtimeToBigint
-} = require('./tc');
+} = require('./util');
 
 var users = {},
 	webUsers = {},
@@ -55,7 +55,10 @@ const
 		...theseModules
 	],
 
-	setupModules = () => modules.forEach(module => module.setup()),
+	setupModules = () => modules.forEach(module => {
+		pushMessage(`Setup ${module.moduleName}`);
+		module.setup();
+	}),
 
 	getModule = (name) => modules.find(module => module.moduleName === name),
 
@@ -87,13 +90,10 @@ const
 					rec.start,
 					rec.end || now
 				);
-				//if (overlapNs) pushMessage(overlapNs);
 				j.push(Number(overlapNs));
 				return acc + Number(overlapNs);
 			}, 0
 		);
-		//if (j.length) pushMessage(`${j.length} array items add up too ${j.reduce((acc, rec) => acc + rec)} maxduration ${maxduration}`);
-		//if (y > maxduration) debugger;
 		return y;
 	},
 

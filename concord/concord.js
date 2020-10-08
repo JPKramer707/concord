@@ -1,6 +1,12 @@
-const { tc } = require('./tc');
+const { tc } = require('./util');
 const { store } = require('./store');
-const { eventEmitter } = require('./eventEmitter');
+const { eventEmitter, log } = require('./eventEmitter');
+const { regularlyInterval } = require('./config');
+const {
+	REGULARLY,
+	RECEIVE_PACKET,
+	COMMAND
+} = require('./constants').EVENTS;
 
 store.registerModules([
 	require('./entropy.module'),
@@ -10,17 +16,19 @@ store.registerModules([
 	require('./mute.module'),
 ]);
 
-const regularlyInterval = 250;
-
 const concord = {
 	start: (connection, startTime) => {
 		store.setConnection(connection);
 		store.setStartTime(startTime);
 		store.setupModules();
-		setInterval(() => eventEmitter.emit('regularly'), regularlyInterval);
+		setInterval(() => eventEmitter.emit(REGULARLY), regularlyInterval);
+		eventEmitter.on(COMMAND, store.pushMessage);
+		log('Concord Start');
 	},
 
-	onReceive: (user, chunk) => eventEmitter.emit('receivePacket', user, chunk),
+	onCommand: (msg) => eventEmitter.emit(COMMAND, msg),
+
+	onReceive: (user, chunk) => eventEmitter.emit(RECEIVE_PACKET, user, chunk),
 
 	tc: tc,
 };

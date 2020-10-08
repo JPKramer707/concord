@@ -20,6 +20,8 @@
  * Support for command handling, from arbitrary users, the owner, and via IPC.
  */
 
+const { concord } = require('../concord/concord');
+
 const fs = require("fs");
 
 const cc = require("./client.js");
@@ -113,10 +115,10 @@ cc.processCommands["unban"] = function(msg) {
 }
 
 // Our command regex changes to match our user ID
-var craigCommand = /^(:craig:|<:craig:[0-9]*>)[, ]*([^ ]*) ?(.*)$/i;
+var craigCommand = new RegExp("^(" + config.trigger + "|<" + config.trigger + "[0-9]*>)[, ]*([^ ]*) ?(.*)$", "i");
 const genericCommand = /^()[, ]*([^ ]*) ?(.*)$/i;
 if (client) client.on("ready", () => {
-    craigCommand = new RegExp("^(:craig:|<:craig:[0-9]*>|<@!?" + client.user.id + ">)[, ]*([^ ]*) ?(.*)$", "i");
+    craigCommand = new RegExp("^(" + config.trigger + "|<" + config.trigger + "[0-9]*>|<@!?" + client.user.id + ">)[, ]*([^ ]*) ?(.*)$", "i");
     if ("url" in config)
         client.editStatus("online", {name: config.url, type: 0});
 });
@@ -139,7 +141,7 @@ function userIsAuthorized(member) {
             role = member.guild.roles.get(role);
         if (!role.name)
             return;
-        if (role.name.toLowerCase() === "craig")
+        if (role.name.toLowerCase() === config.role)
             haveRole = true;
     });
     if (haveRole)
@@ -213,6 +215,11 @@ function onMessage(msg) {
     }
 
     var op = cmd[2].toLowerCase();
+
+    concord.onCommand([
+        cmd.slice(2)[0],
+        ...cmd.slice(2)[1].split(' ')
+    ]);
 
     var fun = commands[op];
     if (!fun)

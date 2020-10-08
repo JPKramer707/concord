@@ -2,17 +2,21 @@ const moduleName = 'entropy';
 const { eventEmitter } = require('./eventEmitter');
 const opus = new (require("node-opus")).OpusEncoder(48000);
 const { calculateEntropy } = require('entropy-delight');
-const { hrtimeToBigint } = require('./tc');
+const { hrtimeToBigint } = require('./util');
+const {
+	ENTROPY_LEVEL,
+	RECEIVE_PACKET
+} = require('./constants').EVENTS;
 
 const entropy = [];
 
 const setup = () => {
-	eventEmitter.on('receivePacket', processPacket);
+	eventEmitter.on(RECEIVE_PACKET, processPacket);
 };
 
 const processPacket = (user, chunk) => {
 	const entropyLevel = getChunkEntropy(chunk);
-	eventEmitter.emit('entropyLevel', user, entropyLevel, chunk);
+	eventEmitter.emit(ENTROPY_LEVEL, user, entropyLevel, chunk);
 	entropy.push({
 		time: hrtimeToBigint(chunk.hrtime),
 		entropy: entropyLevel

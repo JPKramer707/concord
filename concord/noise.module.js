@@ -1,57 +1,49 @@
 const moduleName = 'noise';
+const { NoiseCollector } = require('./NoiseCollector.class');
 const { eventEmitter } = require('./eventEmitter');
 const { store } = require('./store');
-const { hrtimeToBigint } = require('./tc');
+const {
+	ENTROPY_LEVEL,
+	NOISE_START,
+	NOISE_SUSTAIN,
+	NOISE_END
+} = require('./constants').EVENTS;
 
-const threshhold = 45;
 const noise = {};
-const currentTemplate = {
-	start: undefined,
-	sustain: undefined,
-	end: undefined
-};
+const noiseCollectorInstances = {};
 
 const setup = () => {
-	eventEmitter.on('entropyLevel', processEntropy);
+	eventEmitter.on(
+		ENTROPY_LEVEL,
+		(user, entropyLevel, chunk) =>
+			getNoiseCollectorInstanceByUserId(user.id)
+				.addRecord({
+					user,
+					entropyLevel,
+					chunk
+				})
+	);
 };
 
-const processEntropy = (user, entropyLevel, chunk) => {
-	ensureUserSetup(user);
+const getNoiseCollectorInstanceByUserId = (userId) =>
+	noiseCollectorInstances[userId]
+		? noiseCollectorInstances[userId]
+		: noiseCollectorInstances[userId] =
+			(new NoiseCollector())
+				.on('start', (record) => evt(NOISE_START, record))
+				.on('sustain', (record) => evt(NOISE_SUSTAIN, record))
+				.on('end', (record) => evt(NOISE_END, record))
+		;
 
-	if (noise[user.id].current.start !== undefined) {
-		if (entropyLevel < threshhold) {
-			const record = {
-				...noise[user.id].current,
-				end: hrtimeToBigint(chunk.hrtime)
-			};
-			noise[user.id].history.push(record);
-			noise[user.id].current = {
-				...currentTemplate
-			};
-			eventEmitter.emit('noise-end', user, record);
-		} else {
-			noise[user.id].current.sustain = hrtimeToBigint(chunk.hrtime)
-			eventEmitter.emit('noise-sustain', user, noise[user.id].current);
-		}
-	} else {
-		if (entropyLevel > threshhold) {
-			noise[user.id].current.start = hrtimeToBigint(chunk.hrtime)
-			eventEmitter.emit('noise-start', user, noise[user.id].current);
-		}
-	}
+const evt = (evt, record) => {
+	eventEmitter.emit(evt, record);
 };
 
-const ensureUserSetup = (user) => {
-	if (typeof(noise[user.id]) === 'undefined') {
-		noise[user.id] = {
-			current: { ...currentTemplate },
-			history: []
-		};
-	}
-};
+const getCollectionByUserId = (userId) => getNoiseCollectorInstanceByUserId(userId).getCollection();
 
-const getIcons = (userId) => `${noise[userId].current.start ? '🔊' : '🔈'}`;
+const getIcons = (userId) => `${getCollectionByUserId(userId).slice(-1).current ? '🔊' : '🔈'}`;
 
 exports.setup = setup;
 exports.moduleName = moduleName;
 exports.getIcons = getIcons;
+exports.getCollectionByUserId = getCollectionByUserId;

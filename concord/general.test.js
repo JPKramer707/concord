@@ -4,7 +4,7 @@ const {
     mathMin,
     rebounce,
     hrtimeToBigint,
-} = require('./tc');
+} = require('./util');
 
 beforeEach(() => {});
 
@@ -39,6 +39,9 @@ test('rebounce', () => {
     expect(counters.x).toBe(1);
     expect(counters.y).toBe(1);
     expect(counters.z).toBe(1);
+
+    const rebouncers = rebounce();
+    expect(Object.keys(rebouncers).length).toBe(3);
 });
 
 test('mathMin/mathMax work', () => {

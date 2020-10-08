@@ -1,75 +1,69 @@
 const moduleName = 'console';
-const assert = require('assert').strict;
 const pad = require('pad');
-const { tc } = require('./tc');
+const { tc } = require('./util');
 const { throttle } = require('throttle-debounce');
 const { store } = require('./store');
 const { eventEmitter } = require('./eventEmitter');
-const throttleTime = 100;
-const ns = 1000000; // (ns) Nanosecond factor (one milisecond denominated in nanoseconds)
-const speechHistoryDisplayWidthChars = 100;
-const speechHistoryCharDurationNs = 25 * ns; // (ns) Each character in the graph covers this many nanoseconds time
+const constants = require('./constants');
+const {
+	ENTROPY_LEVEL,
+	NOISE_START,
+	NOISE_SUSTAIN,
+	NOISE_END,
+	RECEIVE_PACKET,
+	SPEECH_START,
+	SPEECH_SUSTAIN,
+	SPEECH_END,
+	REGULARLY,
+	COMMAND,
+	LOG
+} = constants.EVENTS;
+const { nsPerSec } = constants;
 
 const speaking = {};
 const noise = {};
+const showHide = {
+	clear: true,
+	report: true,
+	records: false
+};
+const settings = {
+	incrementLengthSec: 0.25,
+	reportLength: 50,
+	throttleTime: 100
+};
 
 const setup = () => {
 	eventEmitter
-		.on('regularly', () => tc(reportTalk))
-		.on('noise-end', (user) => noise[user.id] = false)
-		.on('noise-start', (user) => noise[user.id] = true)
-		.on('speech-end', (user) => speaking[user.id] = false)
-		.on('speech-start', (user) => speaking[user.id] = true);
+		.on(REGULARLY, () => tc(reportTalk))
+		.on(SPEECH_END, (user) => speaking[user.id] = false)
+		.on(SPEECH_START, (user) => speaking[user.id] = true)
+		.on(COMMAND, onCommand)
+		.on(LOG, (msg) => store.pushMessage(`🗒 ${msg}`))
+	;
 };
 
-const generateUserSpeechHistory = (userId, nowHrtime) => {
-	const me = store.getUserById(userId);
-	return `${pad(me.username, 20, ' ')} ` +
-		`${noise[me.id] ? '🔊' : '🔈'}` +
-		`${speaking[me.id] ? '😮' : '😐'} ` +
-		(new Array(speechHistoryDisplayWidthChars))
-		.fill(0, 0, speechHistoryDisplayWidthChars)
-		.map(
-			(val, index, arr) => {
-				const targetIndex = arr.length - index;
-				const t1 = BigInt(speechHistoryCharDurationNs * (targetIndex - 1));
-				const t2 = BigInt(speechHistoryCharDurationNs * (targetIndex + 0));
-				const x = tc(() => store.getUserSpeechBetweenTimes(
-					userId,
-					nowHrtime - t1,
-					nowHrtime - t2,
-					speechHistoryCharDurationNs
-				));
-
-				//               01234567
-				const symbols = '·░▒▓█xyz'.split('');
-				var symCount = 0;
-				if (x >= speechHistoryCharDurationNs) { // 0
-					return symbols[1]; // silence
-				} else if (x > 0) {
-					return symbols[2];
-				} else {
-					return symbols[4]; // Noise
-				}
-				symCount++;
-				if (x > speechHistoryCharDurationNs / 1) return symbols[symCount]; // 1
-				symCount++;
-				if (x > speechHistoryCharDurationNs) return symbols[symCount]; //2
-				symCount++;
-				if (x > speechHistoryCharDurationNs / 1.1) return symbols[symCount]; //3
-				symCount++;
-				if (x > speechHistoryCharDurationNs / 1.2) return symbols[symCount];//4
-				symCount++;
-				if (x == 0) return symbols[symCount];//5
-				symCount++;
-				return symbols[symCount++];//6
+const onCommand = (cmd) => {
+	store.pushMessage(`${SPEECH_START} listeners: ${eventEmitter.listenerCount(SPEECH_START)}`);
+	store.pushMessage(`${NOISE_START} listeners: ${eventEmitter.listenerCount(NOISE_START)}`);
+	switch (cmd[0]) {
+		case 'toggle':
+			if (Object.keys(showHide).indexOf(cmd[1]) !== -1) {
+				showHide[cmd[1]] = !showHide[cmd[1]];
 			}
-		).reverse().join('');
+		break;
+		case 'set':
+			if (Object.keys(settings).indexOf(cmd[1]) !== -1) {
+				const argument = Number(cmd[2]) > 0 ? Number(cmd[2]) : cmd[2];
+				settings[cmd[1]] = argument;
+			}
+		break;
+	}
 };
 
-const reportTalk = throttle(throttleTime, () => {
-	const reportLength = 50;
-	const incrementLengthNs = 1000000000 * 0.25;
+const reportTalk = throttle(settings.throttleTime, () => {
+	const { reportLength, incrementLengthSec } = settings;
+	const incrementLengthNs = nsPerSec * incrementLengthSec;
 	const speechReport = store.getModule('speech').getTimeRangeReport(
 		(new Array(reportLength))
 			.fill()
@@ -96,58 +90,46 @@ const reportTalk = throttle(throttleTime, () => {
 		);
 	};
 
-	//console.clear();
-	console.log(
-		new Date(),
-		"\nAPI Courtesy",
-		"\n   Mute: " + createBars(store.getAPIUsage().mute.count, store.getAPIUsage().mute.limit),
-		"\n\n",
-		"\nMessages:\n",
-		store.getMessages().filter(
-			message => message.time < (nowHrtime * BigInt(1 * 1000 * 1000000))
-		).slice(-15).map(
-			message => `   ${message.time}: ${message.msg.toString().substring(0,100)}`
-		).join("\n"),
-		"\n\n",
-		Object.keys(store.getUsers()).map(
-			userId => `${pad(20, store.getUserById(userId).username)} ` +
-				store.getModule('noise').getIcons(userId) +
-				store.getModule('speech').getIcons(userId) +
-				' ' +
-				speechReport.map(
-					record => record.byUser[userId] > 0 ? '▓' : '░'
-				).join('') +
-				speechReport.reduce(
-					(acc, rec) => acc + rec.byUser[userId], 0
-				) + ' speech total'
-		).join("\n ")
-
-					/*
-					talking = store.getSpeakingByUserId(userId);
-					muted: store.isMuted(userId)
+	if (showHide['clear']) console.clear();
+	if (showHide['report']) {
+		console.log(
+			"\nAPI Courtesy",
+			"\n   Mute: " + createBars(store.getAPIUsage().mute.count, store.getAPIUsage().mute.limit),
+			"\n\n",
+			"\nMessages:\n",
+			store.getMessages().filter(
+				message => message.time < (nowHrtime * BigInt(1 * 1000 * 1000000))
+			).slice(-15).map(
+				message => `   ${message.time / 1000000000n }: ${message.msg.toString().substring(0,100)}`
+			).join("\n "),
+			"\n\n",
+			Object.keys(store.getUsers()).map(
+				userId => `${pad(20, store.getUserById(userId).username)}` +
+					' ' +
+					store.getModule('speech').getIcons(userId) +
+					' ' +
+					store.getModule('noise').getIcons(userId) +
+					' ' +
+					speechReport.map(
+						record => {
+							if (showHide['records']) console.log(record);
+							const ns = record.byUser[userId];
+							if (ns >= incrementLengthNs/1.5) return '█';
+							if (ns >= incrementLengthNs/2.5) return '▓';
+							if (ns >= incrementLengthNs/3.5) return '▒';
+							if (ns >= incrementLengthNs/4.5) return '░';
+							if (ns > 0) return '·';
+							return '-';
 						}
-					).map(
-						obj => `${obj.me.username} ${obj.muted ? '🔇' : obj.talking ? '🔊' : '🔈'}`
-								*/
-	);
+					).join('') +
+					' ' +
+					speechReport.reduce(
+						(acc, rec) => acc + rec.byUser[userId], 0
+					) / speechReport.length + ' speech avg'
+			).join("\n ")
+		);
+	}
 });
-
-const reportVars = () => {
-	console.log(
-		'Vars: ',
-		users,
-		webUsers,
-		webPingers,
-		userTrackNos,
-		userPacketNos,
-		userRecentPackets,
-		corruptWarn,
-		trackNo,
-		startTime,
-		size
-	);
-};
 
 exports.setup = setup;
 exports.moduleName = moduleName;
-exports.generateUserSpeechHistory = generateUserSpeechHistory;

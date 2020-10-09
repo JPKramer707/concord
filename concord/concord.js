@@ -13,7 +13,7 @@ store.registerModules([
 	require('./noise.module'),
 	require('./speech.module'),
 	require('./console.module'),
-	require('./mute.module'),
+	require('./coincidence.module'),
 ]);
 
 const concord = {

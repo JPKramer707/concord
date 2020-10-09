@@ -1,4 +1,4 @@
-const { Collector } = require('./collector');
+const { Collector } = require('./Collector.class');
 const { hrtimeToBigint } = require('./util');
 const { noiseThreshhold } = require('./config');
 const { store } = require('./store');

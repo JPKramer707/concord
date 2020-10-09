@@ -1,4 +1,5 @@
 const moduleName = 'console';
+const chalk = require('chalk');
 const pad = require('pad');
 const { tc } = require('./util');
 const { throttle } = require('throttle-debounce');
@@ -44,8 +45,6 @@ const setup = () => {
 };
 
 const onCommand = (cmd) => {
-	store.pushMessage(`${SPEECH_START} listeners: ${eventEmitter.listenerCount(SPEECH_START)}`);
-	store.pushMessage(`${NOISE_START} listeners: ${eventEmitter.listenerCount(NOISE_START)}`);
 	switch (cmd[0]) {
 		case 'toggle':
 			if (Object.keys(showHide).indexOf(cmd[1]) !== -1) {
@@ -96,6 +95,14 @@ const reportTalk = throttle(settings.throttleTime, () => {
 			"\nAPI Courtesy",
 			"\n   Mute: " + createBars(store.getAPIUsage().mute.count, store.getAPIUsage().mute.limit),
 			"\n\n",
+			"\nSpeakers",
+			"\n   " + store
+				.getModule('speech')
+				.getCurrentRecords()
+				.map(
+					({ userId }) => store.getUserById(userId).username
+				).join(', '),
+			"\n\n",
 			"\nMessages:\n",
 			store.getMessages().filter(
 				message => message.time < (nowHrtime * BigInt(1 * 1000 * 1000000))
@@ -114,7 +121,7 @@ const reportTalk = throttle(settings.throttleTime, () => {
 						record => {
 							if (showHide['records']) console.log(record);
 							const ns = record.byUser[userId];
-							if (ns >= incrementLengthNs/1.5) return '█';
+							if (ns >= incrementLengthNs/1.5) return chalk.yellow('█');
 							if (ns >= incrementLengthNs/2.5) return '▓';
 							if (ns >= incrementLengthNs/3.5) return '▒';
 							if (ns >= incrementLengthNs/4.5) return '░';

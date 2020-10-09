@@ -1,19 +1,18 @@
 const { Collector } = require('./Collector.class');
 const { hrtimeToBigint } = require('./util');
-const { store } = require('./store');
 
-class SpeechCollector extends Collector {
+class CoincidenceCollector extends Collector {
 	collect(record) {
 		return true;
 	}
 
 	getValueFromRecord(record) {
-		return record.chunk;
+		return record.record;
 	}
 
 	getIndexFromRecord(record) {
-		return hrtimeToBigint(record.chunk.hrtime);
+		return record.record.indices[0];
 	}
 }
 
-exports.SpeechCollector = SpeechCollector;
+exports.CoincidenceCollector = CoincidenceCollector;

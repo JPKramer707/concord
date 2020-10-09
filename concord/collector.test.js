@@ -1,4 +1,4 @@
-const { Collector } = require('./collector');
+const { Collector } = require('./Collector.class');
 
 class TestCollector extends Collector {
     getValueFromRecord(record) {

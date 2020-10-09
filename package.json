@@ -9,6 +9,7 @@
     "dependencies": {
         "better-sqlite3": "^7.1.0",
         "bufferutil": "^4.0.1",
+        "chalk": "^4.1.0",
         "cyclic-32": "^1.1.0",
         "discord.js": "^11.6.4",
         "entropy-delight": "^1.0.2",

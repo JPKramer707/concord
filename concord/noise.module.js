@@ -41,7 +41,7 @@ const evt = (evt, record) => {
 
 const getCollectionByUserId = (userId) => getNoiseCollectorInstanceByUserId(userId).getCollection();
 
-const getIcons = (userId) => `${getCollectionByUserId(userId).slice(-1).current ? '🔊' : '🔈'}`;
+const getIcons = (userId) => `${getCollectionByUserId(userId).slice(-1)[0].current ? '🔊' : '🔈'}`;
 
 exports.setup = setup;
 exports.moduleName = moduleName;

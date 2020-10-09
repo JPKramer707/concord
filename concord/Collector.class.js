@@ -91,7 +91,11 @@ class Collector {
 			? this.instances[id]
 				? this.instances[id]
 				: this.instances[id] = this.newInstance()
-			: this.instances
+			: this.getInstances()
+	}
+
+	static getInstances() {
+		return this.instances;
 	}
 
 	static newInstance() {

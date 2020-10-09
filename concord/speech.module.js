@@ -5,7 +5,6 @@ const { eventEmitter } = require('./eventEmitter');
 const { store } = require('./store');
 const { speechDebounceTime } = require('./config');
 const {
-	ENTROPY_LEVEL,
 	NOISE_START,
 	NOISE_SUSTAIN,
 	NOISE_END,
@@ -14,45 +13,57 @@ const {
 	SPEECH_END
 } = require('./constants').EVENTS;
 
-const speech = {};
-const speechCollectorInstances = {};
-
 const setup = () => {
-	const addRecord = (record) => getSpeechCollectorInstanceByUserId(record.user.id).addRecord(record);
+	const speechEnd = rebounce(
+		0,
+		speechDebounceTime,
+		(userId) => SpeechCollector.getInstanceById(userId).closeOpenRecord()
+	);
+	const eventHandler = (evt, record) => {
+		const { user, entropyLevel, chunk } = record;
+		if (evt === SPEECH_START || evt === SPEECH_SUSTAIN) {
+			// ℹ️ Counter-intuitive: noiseEnd() is debounced,
+			// so in order to postpone its execution,
+			// we must perpetually execute it.
+			speechEnd(user.id);
+		}
+		eventEmitter.emit(evt, user, entropyLevel, chunk);
+	}
+	SpeechCollector.setFactory((id) => (new SpeechCollector())
+		.on('start', eventHandler.bind(null, SPEECH_START))
+		.on('sustain', eventHandler.bind(null, SPEECH_SUSTAIN))
+		.on('end', eventHandler.bind(null, SPEECH_END))
+	);
+	const addRecord = (record) => SpeechCollector.getInstanceById(record.user.id).addRecord(record);
 	eventEmitter
 		.on(NOISE_START, addRecord)
 		.on(NOISE_SUSTAIN, addRecord)
+	;
 };
 
-const getSpeechCollectorInstanceByUserId = (userId) =>
-	speechCollectorInstances[userId]
-		? speechCollectorInstances[userId]
-		: speechCollectorInstances[userId] =
-			(new SpeechCollector())
-				.on('start', (record) => evt(SPEECH_START, record))
-				.on('sustain', (record) => evt(SPEECH_SUSTAIN, record))
-				.on('end', (record) => evt(SPEECH_END, record))
-		;
+const getCollectionByUserId = (userId) => SpeechCollector.getCollectionById(userId);
 
-const speechEnd = rebounce(
-	0,
-	speechDebounceTime,
-	(userId) => getSpeechCollectorInstanceByUserId(userId).closeOpenRecord()
-);
-
-const evt = (evt, { user }) => {
-	if (evt === SPEECH_START || evt === SPEECH_SUSTAIN) {
-		// ℹ️ Counter-intuitive: noiseEnd() is debounced,
-		// so in order to postpone its execution,
-		// we must perpetually execute it.
-		speechEnd(user.id);
-	}
-	eventEmitter.emit(evt, record.user, record.entropyLevel, record.chunk);
+const getCurrentRecords = () => {
+	const instances = SpeechCollector.getInstances();
+	if (!instances) return undefined;
+	const userIds = Object.keys(instances);
+	return userIds.map(
+		userId => {
+			const lastRecord = instances[userId].getCollection().slice(-1)[0];
+			return lastRecord.current ? {
+				userId: userId,
+				record: lastRecord
+			} : undefined;
+		}
+	).filter(
+		record => record !== undefined
+	);
 };
 
-const getCollectionByUserId = (userId) => getSpeechCollectorInstanceByUserId(userId).getCollection();
-
-const getIcons = (userId) => `${getCollectionByUserId(userId).slice(-1).current ? '😮' : '😐'}`;
+const getIcons = (userId) => {
+	const collection = SpeechCollector.getCollectionById(userId);
+	return `${collection.length && collection.slice(-1)[0].current ? '😮' : '😐'}`
+};
 
 const getTimeRangeReport = (template, userList) => {
 	const users = userList !== undefined
@@ -72,7 +83,7 @@ const getTimeRangeReport = (template, userList) => {
 	users.forEach(
 		userId => {
 			const user = store.getUserById(userId);
-			getCollectionByUserId(user.id).forEach(
+			SpeechCollector.getCollectionById(user.id).forEach(
 				speechItem => {
 					const [ start, sustain, end ] = speechItem.indices;
 					rv = rv.map(
@@ -112,5 +123,7 @@ const getTimeRangeReport = (template, userList) => {
 exports.setup = setup;
 exports.moduleName = moduleName;
 exports.getIcons = getIcons;
-exports.getCollectionByUserId = getCollectionByUserId;
+exports.getCollectionByUserId = SpeechCollector.getCollectionById;
 exports.getTimeRangeReport = getTimeRangeReport;
+exports.getCurrentRecords = getCurrentRecords;
+

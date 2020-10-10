@@ -90,14 +90,14 @@ class Collector {
 		return (id !== undefined)
 			? this.instances[id]
 				? this.instances[id]
-				: this.instances[id] = this.newInstance()
+				: this.instances[id] = this.newInstance(id)
 			: this.instances
 	}
 
-	static newInstance() {
+	static newInstance(id) {
 		const factory = this.getFactory();
 		if (factory === undefined) throw new Error('newInstance() can only be called after setFactory()');
-		return factory();
+		return factory(id);
 	}
 
 	static setFactory(factory) {

@@ -45,7 +45,7 @@ const getCollectionByUserId = (userId) => SpeechCollector.getCollectionById(user
 
 const getCurrentRecords = () => {
 	const instances = SpeechCollector.getInstances();
-	if (!instances) return undefined;
+	if (!instances) return [];
 	const userIds = Object.keys(instances);
 	return userIds.map(
 		userId => {

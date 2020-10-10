@@ -28,9 +28,9 @@ const fs = require("fs");
 const stream = require("stream");
 const https = require("https");
 const ws = require("ws");
+const { switches } = require("../config.json");
 
 const ogg = require("./ogg.js");
-const opus = new (require("node-opus")).OpusEncoder(48000);
 
 const request = require("request");
 
@@ -161,13 +161,7 @@ function session(msg, prefix, rec) {
 
     // Send the recording message
     setTimeout(()=>{
-        var nowRec = "data/nowrecording.opus";
-        fs.access(nowRec, fs.constants.R_OK, (err) => {
-            try {
-                if (!err)
-                    connection.play("data/nowrecording.opus", {format: "ogg"});
-            } catch (ex) {}
-        });
+        speak(connection, 'click');
     }, 200);
 
     var {
@@ -242,37 +236,40 @@ function session(msg, prefix, rec) {
     }, 1000);
 
     // Set up our recording streams
-    var recFHStream = [
-        fs.createWriteStream(recFileBase + ".header1"),
-        fs.createWriteStream(recFileBase + ".header2")
-    ];
-    var recFStream = fs.createWriteStream(recFileBase + ".data");
-    var recFUStream = fs.createWriteStream(recFileBase + ".users");
-    recFUStream.write("\"0\":{}\n");
+    if (switches.recordAudioToDisk) {
+        var recFHStream = [
+            fs.createWriteStream(recFileBase + ".header1"),
+            fs.createWriteStream(recFileBase + ".header2")
+        ];
+        var recFStream = fs.createWriteStream(recFileBase + ".data");
+        var recFUStream = fs.createWriteStream(recFileBase + ".users");
+        recFUStream.write("\"0\":{}\n");
 
-    // And our ogg encoders
-    var hitHardLimit = false;
-    function write(stream, granulePos, streamNo, packetNo, chunk, flags) {
-        size += chunk.length;
-        if (sizeLimit && size >= sizeLimit) {
-            if (!hitHardLimit) {
-                hitHardLimit = true;
-                log("rec-term", "Size limit",
-                    {uid: rec.uid, vc: connection.channel, rid: id});
-                sReply(true, l("sizelimit", lang));
-                rec.disconnected = true;
-                connection.disconnect();
+        // And our ogg encoders
+        var hitHardLimit = false;
+        function write(stream, granulePos, streamNo, packetNo, chunk, flags) {
+            size += chunk.length;
+            if (sizeLimit && size >= sizeLimit) {
+                if (!hitHardLimit) {
+                    hitHardLimit = true;
+                    log("rec-term", "Size limit",
+                        {uid: rec.uid, vc: connection.channel, rid: id});
+                    sReply(true, l("sizelimit", lang));
+                    rec.disconnected = true;
+                    connection.disconnect();
+                }
+            } else {
+                stream.write(granulePos, streamNo, packetNo, chunk, flags);
             }
-        } else {
-            stream.write(granulePos, streamNo, packetNo, chunk, flags);
         }
+        var recOggHStream = [ new ogg.OggEncoder(recFHStream[0]), new ogg.OggEncoder(recFHStream[1]) ];
+        var recOggStream = new ogg.OggEncoder(recFStream);
+        var recOgg2Stream;
     }
-    var recOggHStream = [ new ogg.OggEncoder(recFHStream[0]), new ogg.OggEncoder(recFHStream[1]) ];
-    var recOggStream = new ogg.OggEncoder(recFStream);
-    var recOgg2Stream;
 
     // Function to encode a single Opus chunk to the ogg file
     function encodeChunk(user, oggStream, streamNo, packetNo, chunk) {
+        if (!switches.recordAudioToDisk) return false;
         var chunkGranule = chunk.time;
 
         if (chunk.length > 4 && chunk[0] === 0xBE && chunk[1] === 0xDE) {
@@ -292,18 +289,7 @@ function session(msg, prefix, rec) {
             chunk = chunk.slice(off);
         }
 
-        // Occasionally check that it's valid Opus data
-        if (packetNo % 50 === 49) {
-            try {
-                opus.decode(chunk, 960);
-            } catch (ex) {
-                if (!corruptWarn[user.id]) {
-                    sReply(true, l("corrupt", lang, user.username, user.discriminator));
-                    corruptWarn[user.id] = true;
-                }
-            }
-            // FIXME: Eventually delete corruption warnings?
-        }
+        // ⚰️ Here died code which checked for corrupt opus data
 
         // Write out the chunk itself
         write(oggStream, chunkGranule, streamNo, packetNo, chunk);
@@ -313,6 +299,7 @@ function session(msg, prefix, rec) {
 
     // Function to flush one or more packets from a user's recent queue
     function flush(user, oggStream, streamNo, queue, ct) {
+        if (!switches.recordAudioToDisk) return false;
         var packetNo = userPacketNos[user.id];
         for (var i = 0; i < ct; i++) {
             var chunk = queue.shift();
@@ -351,12 +338,14 @@ function session(msg, prefix, rec) {
             // Announce them
             monConnect(userTrackNo, user.username + "#" + user.discriminator);
 
-            // Put a valid Opus header at the beginning
-            try {
-                write(recOggHStream[0], 0, userTrackNo, 0, cu.opusHeader[0], ogg.BOS);
-                write(recOggHStream[1], 0, userTrackNo, 1, cu.opusHeader[1]);
-            } catch (ex) {
-                logex(ex);
+            if (switches.recordAudioToDisk) {
+                // Put a valid Opus header at the beginning
+                try {
+                    write(recOggHStream[0], 0, userTrackNo, 0, cu.opusHeader[0], ogg.BOS);
+                    write(recOggHStream[1], 0, userTrackNo, 1, cu.opusHeader[1]);
+                } catch (ex) {
+                    logex(ex);
+                }
             }
 
             // Remember this user's name
@@ -413,6 +402,40 @@ function session(msg, prefix, rec) {
             userTrackNo = userTrackNos[user.id];
             userRecents = userRecentPackets[user.id];
 
+        }
+
+        if (switches.useConcord) {
+            try {
+                const startTime = process.hrtime.bigint();
+                processChunk(connection, users, user, chunk, chunkTime); // 🏛 Concord!
+                reportProfile([startTime, process.hrtime.bigint()]);
+            } catch(e) {
+                websocketSend({ error: e.message });
+                console.error(e);
+            }
+        }
+        try {
+            if (false) {
+                websocketSend({
+                    stats: {
+                        users,  // Active users, by ID
+                        webUsers,  // Active web users, by username#web
+                        webPingers,  // Active ping connections, simply so we can close them when we're done with them
+                        userTrackNos,  // Track numbers for each active user
+                        userPacketNos,  // Packet numbers for each active user
+                        userRecentPackets,  // Recent packets, before they've been flushed, for each active non-web user
+                        corruptWarn,  // Have we warned about this user's data being corrupt?
+                        trackNo,  // Our current track number
+                        noteStreamOn,  // Information for the note stream
+                        noteStreamNo,  // Information for the note stream
+                        notePacketNo,  // Information for the note stream
+                        startTime,  // Set up our recording OGG header and data file
+                        size // The amount of data I've recorded
+                    }
+                });
+            }
+        } catch(e) {
+            console.error(e);
         }
 
         // Add it to the list
@@ -829,11 +852,17 @@ function session(msg, prefix, rec) {
 
     // Inform the monitor that a user is speaking
     function monSpeakOn(idx) {
+        websocketSend({
+            speak: idx
+        });
         monSpeak(idx, true);
     }
 
     // Inform the monitor that a user has stopped speaking
     function monSpeakOff(idx) {
+        websocketSend({
+            silence: idx
+        });
         monSpeak(idx, false);
     }
 
@@ -986,12 +1015,29 @@ function safeJoin(channel, err) {
     function catchConnection() {
         if (guild.voiceConnection) {
             guild.voiceConnection.on("error", (ex) => {
-                // Work around the hellscape of discord.js bugs
-                try {
-                    guild.client.voice.connections.delete(guild.id);
-                } catch (noex) {}
-                if (err)
-                    err(ex);
+                if (guild.client) {
+                    guildClient = guild.client;
+                } else if (guild.shard.client) {
+                    guildClient = guild.shard.client;
+                } else {
+                    console.warn('guild.client is undefined');
+                    console.log(guild);
+                }
+
+                if (guildClient) {
+                    // Work around the hellscape of discord.js bugs
+                    try {
+                        guild.client.voice.connections.delete(guild.id);
+                    } catch (noex) {
+                        console.error(noex);
+                    }
+                    if (err) {
+                        console.error(ex);
+                        err(ex);
+                    }
+                } else {
+                    console.error('No guild client');
+                }
             });
             clearInterval(insaneInterval);
         }
@@ -1007,7 +1053,7 @@ function safeJoin(channel, err) {
 const argPart = /^-([A-Za-z0-9]+) *(.*)$/;
 
 // The recording indicator
-const recIndicator = / *\!?\[RECORDING\] */g;
+const recIndicator = / *\!?🎙 */g;
 
 // Start recording
 function cmdJoin(lang) { return function(msg, cmd) {
@@ -1300,9 +1346,9 @@ function cmdJoin(lang) { return function(msg, cmd) {
             try {
                 // Using '!' to sort early
                 if (localNick)
-                    recNick = ("![RECORDING] " + localNick).substr(0, 32);
+                    recNick = ("🎙 " + localNick).substr(0, 32);
                 else
-                    recNick = "![RECORDING] " + configNick;
+                    recNick = "🎙 " + configNick;
                 guild.editNickname(recNick).then(join).catch((err) => {
                     log("rec-term",
                         "Lack nick change permission: " + JSON.stringify(err+""),
@@ -1524,7 +1570,7 @@ clients.forEach((client) => {
         try {
             if (to.id === client.user.id &&
                 guild.voiceConnection &&
-                (!to.nick || to.nick.indexOf("[RECORDING]") === -1)) {
+                (!to.nick || to.nick.indexOf("🎙") === -1)) {
                 // Make sure this isn't just a transient state
                 if (guild.id in activeRecordings &&
                     guild.voiceConnection.channel.id in activeRecordings[guild.id]) {

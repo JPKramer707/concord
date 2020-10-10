@@ -9,7 +9,7 @@ const send = data => {
 };
 
 wss.on('connection', ws => {
-	webSocket = ws;sers
+	webSocket = ws;
 });	
 
 exports.send = send;

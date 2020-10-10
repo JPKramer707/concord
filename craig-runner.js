@@ -11,6 +11,7 @@ function launch(activeRecordings) {
     me.on("message", (val) => {
         if (typeof val !== "object")
             return;
+        console.log(val.t);
         switch (val.t) {
             case "gracefulRestart":
                 launch(val.activeRecordings);
@@ -25,6 +26,7 @@ function launch(activeRecordings) {
     });
 
     function relaunch() {
+        console.log('relaunch');
         if (me === craig) {
             craig = null;
             setTimeout(() => { launch(); }, 10000);

@@ -1,14 +1,3 @@
-const cfg = {
-	switches: {
-		dominationCheck: false,
-		serverProfileReporting: false,
-		crossTalkDiscriminator: false,
-		serverConsoleReporting: true,
-		serverConsoleVoiceBar: false,
-		voiceAnalysisRollingAverage: false,
-		voiceAnalysisSaveStatistics: false,
-		voiceAnalysisSharingDelight: false
-	}
-};
-
-exports.switches = cfg.switches;
+exports.regularlyInterval = 250;
+exports.noiseThreshhold = 43;
+exports.speechDebounceTime = 250;

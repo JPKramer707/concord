@@ -28,5 +28,11 @@ module.exports = {
     "importantServers": [],
 
     // Time limits
-    "limits": {"record": 6, "download": 168, "secondary": 3}
+    "limits": {"record": 6, "download": 168, "secondary": 3},
+
+    // String used to trigger the bot
+    "trigger": "c",
+
+    // Server role
+    "role": "concord"
 };

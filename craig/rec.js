@@ -21,7 +21,8 @@
  * sessions, recording commands, and other recording-related functionality.
  */
 
-const { processChunk, speak, websocketSend, reportProfile } = require("../concord/concord");
+const { concord } = require('../concord/concord');
+const { store } = require('../concord/store');
 const cp = require("child_process");
 const fs = require("fs");
 const stream = require("stream");
@@ -163,29 +164,17 @@ function session(msg, prefix, rec) {
         speak(connection, 'click');
     }, 200);
 
-    // Active users, by ID
-    var users = {};
-
-    // Active web users, by username#web
-    var webUsers = {};
-
-    // Active ping connections, simply so we can close them when we're done with them
-    var webPingers = {};
-
-    // Track numbers for each active user
-    var userTrackNos = {};
-
-    // Packet numbers for each active user
-    var userPacketNos = {};
-
-    // Recent packets, before they've been flushed, for each active non-web user
-    var userRecentPackets = {};
-
-    // Have we warned about this user's data being corrupt?
-    var corruptWarn = {};
-
-    // Our current track number
-    var trackNo = 1;
+    var {
+        users, // Active users, by ID
+        webUsers,  // Active web users, by username#web
+        webPingers,  // Active ping connections, simply so we can close them when we're done with them
+        userTrackNos,  // Track numbers for each active user
+        userPacketNos,  // Packet numbers for each active user
+        userRecentPackets,  // Recent packets, before they've been flushed, for each active non-web user
+        corruptWarn,  // Have we warned about this user's data being corrupt?
+        trackNo,  // Our current track number
+        size   // The amount of data I've recorded
+    } = store;
 
     // Information for the note stream
     var noteStreamOn = false;
@@ -195,9 +184,6 @@ function session(msg, prefix, rec) {
     // Set up our recording OGG header and data file
     var startTime = process.hrtime();
     var recFileBase = "rec/" + id + ".ogg";
-
-    // The amount of data I've recorded
-    var size = 0;
 
     // Keep track and disconnect if we seem unused
     var lastSize = 0;
@@ -331,7 +317,10 @@ function session(msg, prefix, rec) {
     function onReceive(user, chunk) {
         // By default, chunk.time is the receipt time
         var chunkTime = process.hrtime(startTime);
+        chunk.hrtime = chunkTime;
         chunk.time = chunkTime[0] * 48000 + ~~(chunkTime[1] / 20833.333);
+
+        concord.tc(() => concord.onReceive(user, chunk));
 
         // Show that we're receiving
         lastTime = chunkTime;
@@ -1014,6 +1003,8 @@ function session(msg, prefix, rec) {
             logex(ex);
         }
     });
+
+    concord.tc(() => concord.start(connection, startTime));
 }
 
 // Join a voice channel, working around discord.js' knot of insane bugs

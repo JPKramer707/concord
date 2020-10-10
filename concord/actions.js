@@ -1,27 +1,22 @@
-const { ram } = require('./ram');
-const { speak } = require('./speak');
+const moduleName = 'actions';
 const { client } = require("../craig/client.js");
+const { store } = require('./store');
 
-const mute = (connection, user, guildId) => muteUnmute(true, connection, user, guildId);
-const unMute = (connection, user, guildId) => muteUnmute(false, connection, user, guildId);
-
-const muteUnmute = (bool, connection, user, guildId) => {
-	return false;
-	if (bool) console.log('Muting...');
-
-	client.editGuildMember(
-	    guildId,
-	    user.id,
-	    { mute: bool },
-	    'Citation #000'
-	).then(() => {
-	    const userRAM = ram.getUser(user);
-	    userRAM.serverMute = bool;    
-	    ram.setUser(userRAM);
-	});
-
-	//if (bool) speak(connection, 'click');
+const setMute = (guildId, userId, bool, reason) => {
+	return store.allowAPIUsage('mute')
+		? client.editGuildMember(
+			guildId,
+			userId,
+			{ mute: bool },
+			reason
+		)
+		: new Promise(() => {
+			throw 'API Depleted';
+		});
 };
 
-exports.mute = mute;
-exports.unMute = unMute;
+const setup = () => {};
+
+exports.setup = setup;
+exports.setMute = setMute;
+exports.moduleName = moduleName;

@@ -8,7 +8,6 @@ const send = data => {
 	}
 };
 
-
 wss.on('connection', ws => {
 	webSocket = ws;
 });	

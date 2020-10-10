@@ -13,17 +13,17 @@ Shows the pace of the conversation over time, from start to present.
 Ear rape is the deliberate introduction of audio, which has been amplified to the point of distortion, into a voice chat, as a means of harassment and annoyance to others.
 
 “Ear rape,” as an interpersonal communication phenomenon, is fairly new according to Google search trends.
-![Google search statistics for "Ear rape"](https://pasteboard.co/JuXf2U0.png)
+![Google search statistics for "Ear rape"](https://user-images.githubusercontent.com/13473249/95647584-5650dc00-0a85-11eb-915b-c77d5e47aa10.png)
 There is a [Discord bot](https://botsfordiscord.com/bot/460550695037173770) designed to provide ear-rape on command.
 
 The calling card of “ear rape” is audio signal clipping.
-![Clipping Diagram](https://pasteboard.co/JuXg9qA.png)
+![Clipping Diagram](https://user-images.githubusercontent.com/13473249/95647593-636dcb00-0a85-11eb-91d3-5fc67caca98c.png)
 When clipping occurs, instead of a smooth sine wave being produced as with normal audio, a squared-off and "clipped" waveform is produced resulting in sound distortion. Ear rape is literally impossible to accomplish without producing this telltale sign. Fortunately, this is very easy for a machine to detect.
 
 By detection of this signal distortion, in combination with long-term behavior statistics, a reliable metric for “ear rape” is feasible, and intervention can be performed instantaneously.
 ### Crosstalk & interruption
 If a user contributes noise during another user’s transmission, this is crosstalk.
-![Crosstalk Diagram](https://pasteboard.co/JuXgxxa.png)
+![Crosstalk Diagram](https://user-images.githubusercontent.com/13473249/95647606-7e403f80-0a85-11eb-869b-b56f18f12c51.png)
 Not all crosstalk is interruption.
 
 Crosstalk can take many forms.

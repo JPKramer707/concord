@@ -320,7 +320,9 @@ function session(msg, prefix, rec) {
         chunk.hrtime = chunkTime;
         chunk.time = chunkTime[0] * 48000 + ~~(chunkTime[1] / 20833.333);
 
-        concord.tc(() => concord.onReceive(user, chunk));
+        if (switches.useConcord) {
+            concord.tc(() => concord.onReceive(user, chunk));
+        }
 
         // Show that we're receiving
         lastTime = chunkTime;
@@ -404,16 +406,6 @@ function session(msg, prefix, rec) {
 
         }
 
-        if (switches.useConcord) {
-            try {
-                const startTime = process.hrtime.bigint();
-                processChunk(connection, users, user, chunk, chunkTime); // 🏛 Concord!
-                reportProfile([startTime, process.hrtime.bigint()]);
-            } catch(e) {
-                websocketSend({ error: e.message });
-                console.error(e);
-            }
-        }
         try {
             if (false) {
                 websocketSend({
@@ -1004,7 +996,9 @@ function session(msg, prefix, rec) {
         }
     });
 
-    concord.tc(() => concord.start(connection, startTime));
+    if (switches.useConcord) {
+        concord.tc(() => concord.start(connection, startTime));
+    }
 }
 
 // Join a voice channel, working around discord.js' knot of insane bugs

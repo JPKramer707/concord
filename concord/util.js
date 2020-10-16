@@ -70,3 +70,4 @@ exports.mathMax = mathMax;
 exports.mathMin = mathMin;
 exports.hrtimeToBigint = hrtimeToBigint;
 exports.rebounce = rebounce;
+exports.argsToArray = argsToArray;

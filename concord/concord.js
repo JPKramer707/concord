@@ -34,3 +34,4 @@ const concord = {
 };
 
 exports.concord = concord;
+exports.log = log;

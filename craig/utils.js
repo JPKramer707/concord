@@ -20,7 +20,8 @@
  * Utility functions that had nowhere better to go.
  */
 
-const { setPersistentMessage } = require("../concord/concord");
+const { log: concordLog } = require("../concord/concord");
+const { switches } = require("../config.json");
 const fs = require("fs");
 
 const cc = require("./client.js");
@@ -102,8 +103,9 @@ const isMention = /^\s*<?@/;
 
 // Function to respond to a message by any means necessary
 function reply(msg, dm, prefix, pubtext, privtext) {
-    return setPersistentMessage(privtext || pubtext);
-
+    if (switches.interceptMessagesToLog) {
+        return concordLog(privtext || pubtext);
+    }
 
     if (prefix === "") prefix = null;
 

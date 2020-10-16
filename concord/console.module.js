@@ -40,7 +40,7 @@ const setup = () => {
 		.on(SPEECH_END, (user) => speaking[user.id] = false)
 		.on(SPEECH_START, (user) => speaking[user.id] = true)
 		.on(COMMAND, onCommand)
-		.on(LOG, (msg) => store.pushMessage(`🗒 ${msg}`))
+		.on(LOG, (msg) => store.pushMessage(`🗒  ${msg}`))
 	;
 };
 
@@ -56,6 +56,9 @@ const onCommand = (cmd) => {
 				const argument = Number(cmd[2]) > 0 ? Number(cmd[2]) : cmd[2];
 				settings[cmd[1]] = argument;
 			}
+		break;
+		default:
+			store.pushMessage(`Strange command ${cmd.join(' ')} ignored`);
 		break;
 	}
 };
@@ -107,7 +110,7 @@ const reportTalk = throttle(settings.throttleTime, () => {
 			store.getMessages().filter(
 				message => message.time < (nowHrtime * BigInt(1 * 1000 * 1000000))
 			).slice(-15).map(
-				message => `   ${message.time / 1000000000n }: ${message.msg.toString().substring(0,100)}`
+				message => `   ${message.time / 1000000000n }: ${message.msg.toString().substring(0,100).replace(/(?:\r\n|\r|\n)/g, ' ')}`
 			).join("\n "),
 			"\n\n",
 			Object.keys(store.getUsers()).map(
